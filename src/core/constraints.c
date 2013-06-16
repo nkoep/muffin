@@ -806,7 +806,7 @@ constrain_maximization (MetaWindow         *window,
   gboolean hminbad, vminbad;
   gboolean horiz_equal, vert_equal;
   gboolean constraint_already_satisfied;
-  g_printerr ("constrain max\n");
+
   if (priority > PRIORITY_MAXIMIZATION)
     return TRUE;
 
@@ -843,27 +843,35 @@ constrain_maximization (MetaWindow         *window,
       active_workspace_struts = window->screen->active_workspace->all_struts;
 
       if (g_list_length (window->screen->active_workspace->snapped_windows) > 0) {
-        g_printerr ("what----------------------------\n");
         GList *tmp = window->screen->active_workspace->snapped_windows;
         while (tmp) {
+            if (tmp->data == window)
+                continue;
             MetaStrut strut;
             MetaSide side;
             MetaRectangle rect;
-            meta_window_get_input_rect (window, &rect);
-            side = meta_window_get_tile_side (window);
+            meta_window_get_input_rect (META_WINDOW (tmp->data), &rect);
+            side = meta_window_get_tile_side (META_WINDOW (tmp->data));
             strut.rect = rect;
             strut.side = side;
             active_workspace_struts = g_slist_prepend (active_workspace_struts, &strut);
             tmp = tmp->next;
         }
-      }
 
-      target_size = info->current;
-      extend_by_frame (&target_size, info->borders);
-      meta_rectangle_expand_to_avoiding_struts (&target_size,
-                                                &info->entire_monitor,
-                                                direction,
-                                                active_workspace_struts);
+        target_size = info->current;
+        extend_by_frame (&target_size, info->borders);
+        meta_rectangle_expand_to_snapped_borders (&target_size,
+                                                  &info->entire_monitor,
+                                                   direction,
+                                                   active_workspace_struts);
+      } else {
+          target_size = info->current;
+          extend_by_frame (&target_size, info->borders);
+          meta_rectangle_expand_to_avoiding_struts (&target_size,
+                                                    &info->entire_monitor,
+                                                    direction,
+                                                    active_workspace_struts);
+      }
    }
   /* Now make target_size = maximized size of client window */
   unextend_by_frame (&target_size, info->borders);

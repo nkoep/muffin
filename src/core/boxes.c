@@ -752,6 +752,61 @@ meta_rectangle_expand_region_conditionally (GList     *region,
 }
 
 LOCAL_SYMBOL void
+meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
+                                          const MetaRectangle *expand_to,
+                                          const MetaDirection  direction,
+                                          const GSList        *all_struts)
+{
+  const GSList *strut_iter;
+  gint max_x, max_y, min_x, min_y;
+
+  // x_c = BOX_CENTER_X (*rect);
+  // y_c = BOX_CENTER_Y (*rect);
+  min_x = BOX_LEFT (*expand_to);
+  max_x = BOX_RIGHT (*expand_to);
+  min_y = BOX_TOP (*expand_to);
+  max_y = BOX_BOTTOM (*expand_to);
+
+  /* Iterate over all struts, find a box containing the center of the current rectangle */
+  for (strut_iter = all_struts; strut_iter; strut_iter = strut_iter->next)
+    {
+      g_printerr ("min x %d, max x %d, min y %d, max y %d\n", min_x, max_y, min_y, max_y);
+      MetaStrut *strut = (MetaStrut*) strut_iter->data;
+      g_printerr ("STRUT min x %d, max x %d, min y %d, max y %d\n", BOX_LEFT (strut->rect), BOX_RIGHT (strut->rect), BOX_TOP (strut->rect), BOX_BOTTOM (strut->rect));
+      if (strut->side & META_SIDE_LEFT)
+        if (BOX_RIGHT (strut->rect) > min_x)
+            min_x = BOX_RIGHT (strut->rect);
+      if (strut->side & META_SIDE_RIGHT)
+        if (BOX_LEFT (strut->rect) < max_x)
+            max_x = BOX_LEFT (strut->rect);
+      if (strut->side & META_SIDE_TOP)
+        if (BOX_BOTTOM (strut->rect) > min_y)
+            min_y = BOX_BOTTOM (strut->rect);
+      if (strut->side & META_SIDE_BOTTOM)
+        if (BOX_TOP (strut->rect) < max_y)
+            max_y = BOX_TOP (strut->rect);
+
+
+
+
+
+      // if (BOX_CENTER_X (strut->rect) < x_c && BOX_RIGHT (strut->rect) > min_x)
+      //   min_x = BOX_RIGHT (strut->rect);
+      // else if (BOX_CENTER_X (strut->rect) > x_c && BOX_LEFT (strut->rect) < max_x)
+      //   max_x = BOX_LEFT (strut->rect);
+      // else if (BOX_CENTER_Y (strut->rect) < y_c && BOX_BOTTOM (strut->rect) > min_y)
+      //   min_y = BOX_BOTTOM (strut->rect);
+      // else if (BOX_CENTER_Y (strut->rect) > y_c && BOX_TOP (strut->rect) < max_y)
+      //   max_y = BOX_TOP (strut->rect);
+    } /* end loop over struts */
+  g_printerr ("x %d, y %d, width %d, height %d\n", min_x, min_y, max_x - min_x, max_y - min_y);
+  rect->x = min_x;
+  rect->y = min_y;
+  rect->width = max_x - min_x;
+  rect->height = max_y - min_y;
+}
+
+LOCAL_SYMBOL void
 meta_rectangle_expand_to_avoiding_struts (MetaRectangle       *rect,
                                           const MetaRectangle *expand_to,
                                           const MetaDirection  direction,
