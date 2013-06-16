@@ -185,7 +185,7 @@ meta_workspace_new (MetaScreen *screen)
   workspace->screen_edges = NULL;
   workspace->monitor_edges = NULL;
   workspace->list_containing_self = g_list_prepend (NULL, workspace);
-
+  workspace->snapped_windows = NULL;
   workspace->builtin_struts = NULL;
   workspace->all_struts = NULL;
 
@@ -1048,6 +1048,49 @@ meta_workspace_set_builtin_struts (MetaWorkspace *workspace,
   workspace->builtin_struts = copy_strut_list (struts);
 
   meta_workspace_invalidate_work_area (workspace);
+}
+
+void
+meta_workspace_add_snapped_window (MetaWorkspace *workspace,
+                                   MetaWindow *window)
+{
+
+  if (window->on_all_workspaces) 
+    {
+      GList* tmp = window->screen->workspaces;
+      while (tmp)
+        {
+          MetaWorkspace* work = (MetaWorkspace*) tmp->data;
+          if (!g_list_find (work->snapped_windows, window))
+            work->snapped_windows = g_list_prepend (work->snapped_windows, window);
+          tmp = tmp->next;
+        }
+    }
+  else
+    {
+      g_assert (g_list_find (workspace->snapped_windows, window) == NULL);
+      workspace->snapped_windows = g_list_prepend (workspace->snapped_windows, window);
+    }
+}
+
+void
+meta_workspace_remove_snapped_window (MetaWorkspace *workspace,
+                                      MetaWindow *window)
+{
+  if (window->on_all_workspaces) 
+    {
+      GList* tmp = window->screen->workspaces;
+      while (tmp)
+        {
+          MetaWorkspace* work = (MetaWorkspace*) tmp->data;
+          work->snapped_windows = g_list_remove (work->snapped_windows, window);
+          tmp = tmp->next;
+        }
+    }
+  else
+    {
+      workspace->snapped_windows = g_list_remove (workspace->snapped_windows, window);
+    }
 }
 
 LOCAL_SYMBOL void

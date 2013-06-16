@@ -1098,6 +1098,9 @@ meta_window_new_with_attrs (MetaDisplay       *display,
   window->maximized_horizontally = FALSE;
   window->maximized_vertically = FALSE;
   window->corner_tiled = FALSE;
+  window->snapped = FALSE;
+  window->snap_queued = FALSE;
+  window->zone_queued = ZONE_NONE;
   window->maximize_horizontally_after_placement = FALSE;
   window->maximize_vertically_after_placement = FALSE;
   window->minimize_after_placement = FALSE;
@@ -3771,6 +3774,16 @@ meta_window_tile (MetaWindow *window)
        */
       meta_window_queue (window, META_QUEUE_MOVE_RESIZE);
     }
+    if (window->snap_queued) {
+        window->snapped = TRUE;
+        meta_workspace_add_snapped_window (window->workspace, window);
+        window->snap_queued = FALSE;
+        g_printerr ("snapping\n");
+    } else {
+        window->snapped = FALSE;
+        window->snap_queued = FALSE;
+        g_printerr ("tile only");
+    }
 }
 
 static gboolean
@@ -3926,6 +3939,10 @@ unmaximize_window_before_freeing (MetaWindow        *window)
   window->maximized_horizontally = FALSE;
   window->maximized_vertically = FALSE;
   window->corner_tiled = FALSE;
+  if (window->snapped) {
+    window->snapped = FALSE;
+    meta_workspace_remove_snapped_window (window->workspace, window);
+  }
 
   if (window->withdrawn)                /* See bug #137185 */
     {
@@ -4073,7 +4090,10 @@ meta_window_unmaximize_internal (MetaWindow        *window,
         window->corner_tiled = FALSE;
        // meta_window_unstick (window);
     }
-
+    if (window->snapped) {
+        window->snapped = FALSE;
+        meta_workspace_remove_snapped_window (window->workspace, window);
+    }
     g_object_freeze_notify (G_OBJECT (window));
     g_object_notify (G_OBJECT (window), "maximized-horizontally");
     g_object_notify (G_OBJECT (window), "maximized-vertically");
@@ -5694,6 +5714,38 @@ meta_window_get_outer_rect (const MetaWindow *window,
     }
   else
     *rect = window->rect;
+}
+
+MetaSide
+meta_window_get_tile_side (MetaWindow *window)
+{
+    MetaSide side;
+    switch (window->tile_mode) {
+        case META_TILE_LEFT:
+        case META_TILE_HALF_LEFT:
+        case META_TILE_ULC:
+        case META_TILE_LLC:
+            side = META_SIDE_LEFT;
+            break;
+        case META_TILE_RIGHT:
+        case META_TILE_HALF_RIGHT:
+        case META_TILE_URC:
+        case META_TILE_LRC:
+            side = META_SIDE_RIGHT;
+            break;
+        case META_TILE_TOP:
+        case META_TILE_HALF_TOP:
+            side = META_SIDE_TOP;
+            break;
+        case META_TILE_BOTTOM:
+        case META_TILE_HALF_BOTTOM:
+            side = META_SIDE_BOTTOM;
+            break;
+        default:
+            side = META_SIDE_TOP;
+            break;
+    }
+    return side;
 }
 
 const char*
@@ -9015,7 +9067,8 @@ update_move (MetaWindow  *window,
    * the threshold in the Y direction. Tiled windows can also be pulled
    * loose via X motion.
    */
-
+  if (window->snapped)
+    shake_threshold *= 6;
   if ((META_WINDOW_MAXIMIZED (window) && ABS (dy) >= shake_threshold) ||
       ((META_WINDOW_TILED_SIDE_BY_SIDE (window) ||
         META_WINDOW_TILED_TOP_BOTTOM (window) ||

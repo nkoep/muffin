@@ -704,6 +704,7 @@ gboolean meta_window_can_tile_quarter_vertical_pane (MetaWindow *window);
 gboolean meta_window_can_tile_top_bottom (MetaWindow *window);
 gboolean meta_window_can_tile_half_top_bottom (MetaWindow *window);
 gboolean meta_window_can_tile_corner         (MetaWindow *window);
+MetaSide meta_window_get_tile_side (MetaWindow *window);
 
 void meta_window_compute_tile_match (MetaWindow *window);
 

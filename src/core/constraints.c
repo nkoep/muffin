@@ -806,7 +806,7 @@ constrain_maximization (MetaWindow         *window,
   gboolean hminbad, vminbad;
   gboolean horiz_equal, vert_equal;
   gboolean constraint_already_satisfied;
-
+  g_printerr ("constrain max\n");
   if (priority > PRIORITY_MAXIMIZATION)
     return TRUE;
 
@@ -820,7 +820,7 @@ constrain_maximization (MetaWindow         *window,
     {
       meta_window_get_current_tile_area (window, &target_size);
     }
-  else if (META_WINDOW_MAXIMIZED (window))
+  else if (META_WINDOW_MAXIMIZED (window) && g_list_length (window->screen->active_workspace->snapped_windows) == 0)
     {
       target_size = info->work_area_monitor;
     }
@@ -841,6 +841,22 @@ constrain_maximization (MetaWindow         *window,
       else
         direction = META_DIRECTION_VERTICAL;
       active_workspace_struts = window->screen->active_workspace->all_struts;
+
+      if (g_list_length (window->screen->active_workspace->snapped_windows) > 0) {
+        g_printerr ("what----------------------------\n");
+        GList *tmp = window->screen->active_workspace->snapped_windows;
+        while (tmp) {
+            MetaStrut strut;
+            MetaSide side;
+            MetaRectangle rect;
+            meta_window_get_input_rect (window, &rect);
+            side = meta_window_get_tile_side (window);
+            strut.rect = rect;
+            strut.side = side;
+            active_workspace_struts = g_slist_prepend (active_workspace_struts, &strut);
+            tmp = tmp->next;
+        }
+      }
 
       target_size = info->current;
       extend_by_frame (&target_size, info->borders);
@@ -902,7 +918,7 @@ constrain_tiling (MetaWindow         *window,
     return TRUE;
 
   /* Determine whether constraint applies; exit if it doesn't */
-  if (!META_WINDOW_TILED_SIDE_BY_SIDE (window))
+  if (!META_WINDOW_TILED_SIDE_BY_SIDE (window) && !META_WINDOW_TILED_TOP_BOTTOM (window) && !META_WINDOW_TILED_CORNER (window))
     return TRUE;
 
   /* Calculate target_size - as the tile previews need this as well, we
