@@ -1956,6 +1956,8 @@ meta_screen_tile_preview_update_timeout (gpointer data)
         {
           case META_TILE_LEFT:
           case META_TILE_RIGHT:
+          case META_TILE_HALF_LEFT:
+          case META_TILE_HALF_RIGHT:
               if (!META_WINDOW_TILED_SIDE_BY_SIDE (window))
                 needs_preview = TRUE;
               break;
@@ -1966,11 +1968,17 @@ meta_screen_tile_preview_update_timeout (gpointer data)
               if (!META_WINDOW_TILED_CORNER (window))
                 needs_preview = TRUE;
               break;
+          case META_TILE_TOP:
+          case META_TILE_BOTTOM:
+          case META_TILE_HALF_TOP:
+          case META_TILE_HALF_BOTTOM:
+              if (!META_WINDOW_TILED_TOP_BOTTOM (window))
+                needs_preview = TRUE;
+              break;
           case META_TILE_MAXIMIZED:
               if (!META_WINDOW_MAXIMIZED (window))
                 needs_preview = TRUE;
               break;
-
           default:
               needs_preview = FALSE;
               break;

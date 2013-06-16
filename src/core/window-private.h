@@ -129,7 +129,6 @@ struct _MetaWindow
   guint maximized_vertically : 1;
 
   guint corner_tiled : 1;
-  guint side_tiled: 1;
 
   /* Whether we have to maximize/minimize after placement */
   guint maximize_horizontally_after_placement : 1;
@@ -139,7 +138,7 @@ struct _MetaWindow
   /* The current or requested tile mode. If maximized_vertically is true,
    * this is the current mode. If not, it is the mode which will be
    * requested after the window grab is released */
-  guint tile_mode : 3;
+  guint tile_mode : 4;
   /* The last "full" maximized/unmaximized state. We need to keep track of
    * that to toggle between normal/tiled or maximized/tiled states. */
   guint saved_maximize : 1;
@@ -447,11 +446,29 @@ struct _MetaWindowClass
                                        (w)->tile_mode == META_TILE_LEFT)
 #define META_WINDOW_TILED_RIGHT(w)    (META_WINDOW_TILED_SIDE_BY_SIDE(w) && \
                                        (w)->tile_mode == META_TILE_RIGHT)
+#define META_WINDOW_TILED_HALF_LEFT(w)     (META_WINDOW_TILED_SIDE_BY_SIDE(w) && \
+                                            (w)->tile_mode == META_TILE_HALF_LEFT)
+#define META_WINDOW_TILED_HALF_RIGHT(w)    (META_WINDOW_TILED_SIDE_BY_SIDE(w) && \
+                                            (w)->tile_mode == META_TILE_HALF_RIGHT)
+
 #define META_WINDOW_TILED_CORNER(w)    ((w)->corner_tiled)
 #define META_WINDOW_TILED_ULC(w)       (META_WINDOW_TILED_CORNER (w) && (w)->tile_mode == META_TILE_ULC)
 #define META_WINDOW_TILED_LLC(w)       (META_WINDOW_TILED_CORNER (w) && (w)->tile_mode == META_TILE_LLC)
 #define META_WINDOW_TILED_URC(w)       (META_WINDOW_TILED_CORNER (w) && (w)->tile_mode == META_TILE_URC)
 #define META_WINDOW_TILED_LRC(w)       (META_WINDOW_TILED_CORNER (w) && (w)->tile_mode == META_TILE_LRC)
+
+#define META_WINDOW_TILED_TOP_BOTTOM(w)  (!(w)->maximized_vertically && \
+                                           (w)->maximized_horizontally && \
+                                           (w)->tile_mode != META_TILE_NONE)
+
+#define META_WINDOW_TILED_TOP(w)     (META_WINDOW_TILED_TOP_BOTTOM(w) && \
+                                      (w)->tile_mode == META_TILE_TOP)
+#define META_WINDOW_TILED_BOTTOM(w)    (META_WINDOW_TILED_TOP_BOTTOM(w) && \
+                                        (w)->tile_mode == META_TILE_BOTTOM)
+#define META_WINDOW_TILED_HALF_TOP(w)     (META_WINDOW_TILED_TOP_BOTTOM(w) && \
+                                           (w)->tile_mode == META_TILE_HALF_TOP)
+#define META_WINDOW_TILED_HALF_BOTTOM(w)    (META_WINDOW_TILED_TOP_BOTTOM(w) && \
+                                             (w)->tile_mode == META_TILE_HALF_BOTTOM)
 
 #define META_WINDOW_TILED_MAXIMIZED(w)(META_WINDOW_MAXIMIZED(w) && \
                                        (w)->tile_mode == META_TILE_MAXIMIZED)
@@ -678,7 +695,11 @@ void meta_window_propagate_focus_appearance (MetaWindow *window,
 
 gboolean meta_window_should_attach_to_parent (MetaWindow *window);
 gboolean meta_window_can_tile_side_by_side   (MetaWindow *window);
+gboolean meta_window_can_tile_quarter_vertical_pane (MetaWindow *window);
+gboolean meta_window_can_tile_top_bottom (MetaWindow *window);
+gboolean meta_window_can_tile_half_top_bottom (MetaWindow *window);
 gboolean meta_window_can_tile_corner         (MetaWindow *window);
+
 void meta_window_compute_tile_match (MetaWindow *window);
 
 #endif
