@@ -130,6 +130,11 @@ struct _MetaWindow
 
   guint corner_tiled : 1;
 
+  guint32 snap_delay_timestamp;
+  guint snap_queued : 1;
+  guint zone_queued;
+  guint snapped : 1;
+
   /* Whether we have to maximize/minimize after placement */
   guint maximize_horizontally_after_placement : 1;
   guint maximize_vertically_after_placement : 1;

@@ -146,6 +146,8 @@ static gboolean idle_update_icon (gpointer data);
 
 G_DEFINE_TYPE (MetaWindow, meta_window, G_TYPE_OBJECT);
 
+#define SNAP_DELAY 2000
+
 enum {
   PROP_0,
 
@@ -8917,7 +8919,9 @@ update_move (MetaWindow  *window,
     }
   else if (meta_prefs_get_edge_tiling () &&
            !META_WINDOW_MAXIMIZED (window) &&
-           !META_WINDOW_TILED_SIDE_BY_SIDE (window))
+           !META_WINDOW_TILED_SIDE_BY_SIDE (window) &&
+           !META_WINDOW_TILED_TOP_BOTTOM (window) &&
+           !META_WINDOW_TILED_CORNER (window))
     {
       const MetaMonitorInfo *monitor;
       MetaRectangle work_area;
@@ -8944,6 +8948,22 @@ update_move (MetaWindow  *window,
        * and set tile_mode accordingly.
        */
       guint zone = get_current_zone (window, monitor->rect, work_area, x, y, shake_threshold);
+      if (zone != ZONE_NONE) {
+        if (window->zone_queued == ZONE_NONE) {
+            window->zone_queued = zone;
+            window->snap_delay_timestamp = meta_display_get_current_time (window->display);
+        } else if (window->zone_queued == zone) {
+            if (window->snap_delay_timestamp + SNAP_DELAY < meta_display_get_current_time (window->display)) {
+                window->snap_queued = TRUE;
+            }
+        } else {
+            window->snap_queued = FALSE;
+            window->zone_queued = zone;
+        }
+      } else {
+        window->snap_queued = FALSE;
+        window->zone_queued = ZONE_NONE;
+      }
 
       switch (zone) {
         case ZONE_0:
@@ -8997,7 +9017,10 @@ update_move (MetaWindow  *window,
    */
 
   if ((META_WINDOW_MAXIMIZED (window) && ABS (dy) >= shake_threshold) ||
-      (META_WINDOW_TILED_SIDE_BY_SIDE (window) && (MAX (ABS (dx), ABS (dy)) >= shake_threshold)))
+      ((META_WINDOW_TILED_SIDE_BY_SIDE (window) ||
+        META_WINDOW_TILED_TOP_BOTTOM (window) ||
+        META_WINDOW_TILED_CORNER (window)) &&
+        (MAX (ABS (dx), ABS (dy)) >= shake_threshold)))
     {
       double prop;
 
@@ -9137,7 +9160,6 @@ check_resize_unmaximize(MetaWindow *window,
   MetaMaximizeFlags new_unmaximize;
 
   threshold = meta_prefs_get_edge_detach_threshold ();
-
   new_unmaximize = 0;
 
   if (window->maximized_horizontally ||
@@ -9550,11 +9572,19 @@ update_tile_mode (MetaWindow *window)
     {
       case META_TILE_LEFT:
       case META_TILE_RIGHT:
+      case META_TILE_HALF_LEFT:
+      case META_TILE_HALF_RIGHT:
       case META_TILE_ULC:
       case META_TILE_LLC:
       case META_TILE_URC:
       case META_TILE_LRC:
-          if (!META_WINDOW_TILED_SIDE_BY_SIDE (window) || !META_WINDOW_TILED_CORNER (window))
+      case META_TILE_TOP:
+      case META_TILE_BOTTOM:
+      case META_TILE_HALF_TOP:
+      case META_TILE_HALF_BOTTOM:
+          if (!META_WINDOW_TILED_SIDE_BY_SIDE (window) ||
+              !META_WINDOW_TILED_CORNER (window) || 
+              !META_WINDOW_TILED_TOP_BOTTOM (window))
               window->tile_mode = META_TILE_NONE;
           break;
       case META_TILE_MAXIMIZED:
