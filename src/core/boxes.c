@@ -760,10 +760,10 @@ meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
                                           const MetaRectangle *user_rect)
 {
   const GSList *strut_iter;
-  gint x_c, y_c, max_x, max_y, min_x, min_y;
+  gint x_c, y_c, max_x, max_y, min_x, min_y, fallback_x, fallback_y, fallback_width, fallback_height;
 
   x_c = BOX_CENTER_X (*user_rect);
-  y_c = BOX_CENTER_Y (*user_rect);
+  y_c = BOX_TOP (*user_rect);
   min_x = BOX_LEFT (*expand_to);
   max_x = BOX_RIGHT (*expand_to);
   min_y = BOX_TOP (*expand_to);
@@ -788,6 +788,12 @@ meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
     } /* end loop over struts */
 
   gboolean ulc = FALSE, llc = FALSE, urc = FALSE, lrc = FALSE;
+
+/* store safe fallback values if we end up with an impossible situation at the end */
+  fallback_x = min_x;
+  fallback_y = min_y;
+  fallback_width = max_x - min_x;
+  fallback_height = max_y - min_y;
 
   for (strut_iter = snapped_windows_as_struts; strut_iter; strut_iter = strut_iter->next)
     {
@@ -888,6 +894,15 @@ meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
   rect->y = min_y;
   rect->width = max_x - min_x;
   rect->height = max_y - min_y;
+
+  if (rect->width <= 0) {
+    rect->x = fallback_x;
+    rect->width = fallback_width;
+  }
+  if (rect->height <= 0) {
+    rect->y = fallback_y;
+    rect->height = fallback_height;
+  }
 }
 
 LOCAL_SYMBOL void
