@@ -3732,7 +3732,7 @@ meta_window_tile (MetaWindow *window)
       window->tile_mode == META_TILE_URC ||
       window->tile_mode == META_TILE_LRC) {
     window->corner_tiled = TRUE;
-    //meta_window_stick (window);
+    meta_window_stick (window);
   }
 
   if (window->tile_mode == META_TILE_LEFT ||
@@ -3743,7 +3743,7 @@ meta_window_tile (MetaWindow *window)
       window->tile_mode == META_TILE_BOTTOM ||
       window->tile_mode == META_TILE_HALF_TOP ||
       window->tile_mode == META_TILE_HALF_BOTTOM) {
-    //meta_window_stick (window);
+    meta_window_stick (window);
   }
 
   meta_window_maximize_internal (window, directions, NULL);

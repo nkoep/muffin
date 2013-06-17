@@ -291,10 +291,10 @@ meta_frame_get_flags (MetaFrame *frame)
   if (META_WINDOW_MAXIMIZED (frame->window))
     flags |= META_FRAME_MAXIMIZED;
 
-  if (META_WINDOW_TILED_LEFT (frame->window))
+  if (META_WINDOW_TILED_LEFT (frame->window) && !frame->window->snapped)
     flags |= META_FRAME_TILED_LEFT;
 
-  if (META_WINDOW_TILED_RIGHT (frame->window))
+  if (META_WINDOW_TILED_RIGHT (frame->window) && !frame->window->snapped)
     flags |= META_FRAME_TILED_RIGHT;
 
   if (frame->window->fullscreen)
@@ -305,7 +305,10 @@ meta_frame_get_flags (MetaFrame *frame)
 
   if (frame->window->wm_state_above)
     flags |= META_FRAME_ABOVE;
-  
+
+  if (frame->window->snapped)
+    flags |= META_FRAME_MAXIMIZED;
+
   return flags;
 }
 
