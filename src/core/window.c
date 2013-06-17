@@ -191,7 +191,7 @@ enum
 /* edge zones for tiling/snapping identification
 
   ___________________________
-  |      0     1     2      |
+  | 12   0     1     2   13 |
   |                         |
   |  6                   9  |
   |                         |
@@ -201,7 +201,7 @@ enum
   |                         |
   |  8                  11  |
   |                         |
-  |      5     4     3      |
+  | 15   5     4     3   14 |
   |_________________________|
 
 */
@@ -219,12 +219,24 @@ enum {
     ZONE_9,
     ZONE_10,
     ZONE_11,
-    ZONE_TOP,
-    ZONE_RIGHT,
-    ZONE_BOTTOM,
-    ZONE_LEFT,
+    ZONE_12,
+    ZONE_13,
+    ZONE_14,
+    ZONE_15,
     ZONE_NONE
 };
+
+typedef enum
+{
+    ZONE_TOP =      1 << 0,
+    ZONE_RIGHT =    1 << 1,
+    ZONE_BOTTOM =   1 << 2,
+    ZONE_LEFT =     1 << 3,
+    ZONE_ULC =      ZONE_TOP | ZONE_LEFT,
+    ZONE_LLC =      ZONE_BOTTOM | ZONE_LEFT,
+    ZONE_URC =      ZONE_TOP | ZONE_RIGHT,
+    ZONE_LRC =      ZONE_BOTTOM | ZONE_RIGHT
+} TileZone;
 
 static guint window_signals[LAST_SIGNAL] = { 0 };
 
@@ -3778,11 +3790,11 @@ meta_window_tile (MetaWindow *window)
         window->snapped = TRUE;
         meta_workspace_add_snapped_window (window->workspace, window);
         window->snap_queued = FALSE;
-        g_printerr ("snapping\n");
+        g_printerr ("________________________snapping\n");
     } else {
         window->snapped = FALSE;
         window->snap_queued = FALSE;
-        g_printerr ("tile only");
+        g_printerr ("________________________tile only\n");
     }
 }
 
@@ -8872,22 +8884,20 @@ get_current_zone (MetaWindow   *window,
                   int           y,
                   int           shake_threshold)
 {
-    guint edge_zone = ZONE_NONE;
+    TileZone edge_zone = 0;
     guint zone = ZONE_NONE;
     /* First, establish edges, with top and bottom first,
        so they take priority in the corners                  */
     if (y >= monitor.y && y <= work_area.y)
-        edge_zone = ZONE_TOP;
-    else if (y >= (work_area.y + work_area.height - shake_threshold) &&
+        edge_zone |= ZONE_TOP;
+    if (y >= (work_area.y + work_area.height - shake_threshold) &&
              y < (monitor.y + monitor.height))
-        edge_zone = ZONE_BOTTOM;
-    else if (x >= monitor.x && x < (work_area.x + shake_threshold))
-        edge_zone = ZONE_LEFT;
-    else if (x >= (work_area.x + work_area.width - shake_threshold) &&
+        edge_zone |= ZONE_BOTTOM;
+    if (x >= monitor.x && x < (work_area.x + shake_threshold))
+        edge_zone |= ZONE_LEFT;
+    if (x >= (work_area.x + work_area.width - shake_threshold) &&
              x < (monitor.x + monitor.width))
-        edge_zone = ZONE_RIGHT;
-    else
-        edge_zone = ZONE_NONE;
+        edge_zone |= ZONE_RIGHT;
 
     /* Now for each edge zone, we can figure out the specific subzone we're in */
 
@@ -8899,6 +8909,18 @@ get_current_zone (MetaWindow   *window,
     gint x_div = work_area.width / 4;
 
     switch (edge_zone) {
+        case ZONE_ULC:
+            zone = ZONE_12;
+            break;
+        case ZONE_LLC:
+            zone = ZONE_15;
+            break;
+        case ZONE_URC:
+            zone = ZONE_13;
+            break;
+        case ZONE_LRC:
+            zone = ZONE_14;
+            break;
         case ZONE_TOP:
         case ZONE_BOTTOM:
             if (x >= monitor.x + 3 * x_div && meta_window_can_tile_half_top_bottom (window))
@@ -9027,40 +9049,52 @@ update_move (MetaWindow  *window,
 
       switch (zone) {
         case ZONE_0:
-            window->tile_mode = META_TILE_HALF_LEFT;
-            break;
-        case ZONE_1:
             window->tile_mode = META_TILE_TOP;
             break;
-        case ZONE_2:
+        case ZONE_1:
             window->tile_mode = META_TILE_HALF_TOP;
             break;
-        case ZONE_3:
-            window->tile_mode = META_TILE_HALF_BOTTOM;
+        case ZONE_2:
+            window->tile_mode = META_TILE_TOP;
             break;
-        case ZONE_4:
+        case ZONE_3:
             window->tile_mode = META_TILE_BOTTOM;
             break;
+        case ZONE_4:
+            window->tile_mode = META_TILE_HALF_BOTTOM;
+            break;
         case ZONE_5:
-            window->tile_mode = META_TILE_HALF_RIGHT;
+            window->tile_mode = META_TILE_BOTTOM;
             break;
         case ZONE_6:
-            window->tile_mode = META_TILE_ULC;
-            break;
-        case ZONE_7:
             window->tile_mode = META_TILE_LEFT;
             break;
+        case ZONE_7:
+            window->tile_mode = META_TILE_HALF_LEFT;
+            break;
         case ZONE_8:
-            window->tile_mode = META_TILE_LLC;
+            window->tile_mode = META_TILE_LEFT;
             break;
         case ZONE_9:
-            window->tile_mode = META_TILE_URC;
-            break;
-        case ZONE_10:
             window->tile_mode = META_TILE_RIGHT;
             break;
+        case ZONE_10:
+            window->tile_mode = META_TILE_HALF_RIGHT;
+            break;
         case ZONE_11:
+            window->tile_mode = META_TILE_RIGHT;
+            break;
+        case ZONE_12:
+            window->tile_mode = META_TILE_ULC;
+            break;
+        case ZONE_13:
+            window->tile_mode = META_TILE_URC;
+            break;
+        case ZONE_14:
             window->tile_mode = META_TILE_LRC;
+            break;
+        case ZONE_15:
+            window->tile_mode = META_TILE_LLC;
             break;
         default:
             window->tile_mode = META_TILE_NONE;
