@@ -113,7 +113,9 @@ GList*   meta_rectangle_expand_region_conditionally (
 void meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
                                                const MetaRectangle *expand_to,
                                                const MetaDirection  direction,
-                                               const GSList        *all_struts);
+                                               const GSList        *all_struts,
+                                               const GSList        *snapped_windows_as_struts,
+                                               const MetaRectangle *user_rect);
 
 /* Expand rect in direction to the size of expand_to, and then clip out any
  * overlapping struts oriented orthognal to the expansion direction.  (Think

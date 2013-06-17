@@ -5726,19 +5726,20 @@ meta_window_get_tile_side (MetaWindow *window)
             side = META_SIDE_LEFT;
             break;
         case META_TILE_ULC:
-            side = META_SIDE_LEFT | META_SIDE_TOP;
+            side = (META_SIDE_LEFT | META_SIDE_TOP);
             break;
         case META_TILE_LLC:
-            side = META_SIDE_LEFT | META_SIDE_BOTTOM;
+            side = (META_SIDE_LEFT | META_SIDE_BOTTOM);
             break;
         case META_TILE_RIGHT:
         case META_TILE_HALF_RIGHT:
             side = META_SIDE_RIGHT;
             break;
         case META_TILE_URC:
-            side = META_SIDE_RIGHT | META_SIDE_TOP;
+            side = (META_SIDE_RIGHT | META_SIDE_TOP);
+            break;
         case META_TILE_LRC:
-            side = META_SIDE_RIGHT | META_SIDE_BOTTOM;
+            side = (META_SIDE_RIGHT | META_SIDE_BOTTOM);
             break;
         case META_TILE_TOP:
         case META_TILE_HALF_TOP:

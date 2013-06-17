@@ -755,13 +755,15 @@ LOCAL_SYMBOL void
 meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
                                           const MetaRectangle *expand_to,
                                           const MetaDirection  direction,
-                                          const GSList        *all_struts)
+                                          const GSList        *all_struts,
+                                          const GSList        *snapped_windows_as_struts,
+                                          const MetaRectangle *user_rect)
 {
   const GSList *strut_iter;
-  gint max_x, max_y, min_x, min_y;
+  gint x_c, y_c, max_x, max_y, min_x, min_y;
 
-  // x_c = BOX_CENTER_X (*rect);
-  // y_c = BOX_CENTER_Y (*rect);
+  x_c = BOX_CENTER_X (*user_rect);
+  y_c = BOX_CENTER_Y (*user_rect);
   min_x = BOX_LEFT (*expand_to);
   max_x = BOX_RIGHT (*expand_to);
   min_y = BOX_TOP (*expand_to);
@@ -770,9 +772,7 @@ meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
   /* Iterate over all struts, find a box containing the center of the current rectangle */
   for (strut_iter = all_struts; strut_iter; strut_iter = strut_iter->next)
     {
-      g_printerr ("min x %d, max x %d, min y %d, max y %d\n", min_x, max_y, min_y, max_y);
       MetaStrut *strut = (MetaStrut*) strut_iter->data;
-      g_printerr ("STRUT min x %d, max x %d, min y %d, max y %d\n", BOX_LEFT (strut->rect), BOX_RIGHT (strut->rect), BOX_TOP (strut->rect), BOX_BOTTOM (strut->rect));
       if (strut->side & META_SIDE_LEFT)
         if (BOX_RIGHT (strut->rect) > min_x)
             min_x = BOX_RIGHT (strut->rect);
@@ -785,21 +785,105 @@ meta_rectangle_expand_to_snapped_borders (MetaRectangle       *rect,
       if (strut->side & META_SIDE_BOTTOM)
         if (BOX_TOP (strut->rect) < max_y)
             max_y = BOX_TOP (strut->rect);
-
-
-
-
-
-      // if (BOX_CENTER_X (strut->rect) < x_c && BOX_RIGHT (strut->rect) > min_x)
-      //   min_x = BOX_RIGHT (strut->rect);
-      // else if (BOX_CENTER_X (strut->rect) > x_c && BOX_LEFT (strut->rect) < max_x)
-      //   max_x = BOX_LEFT (strut->rect);
-      // else if (BOX_CENTER_Y (strut->rect) < y_c && BOX_BOTTOM (strut->rect) > min_y)
-      //   min_y = BOX_BOTTOM (strut->rect);
-      // else if (BOX_CENTER_Y (strut->rect) > y_c && BOX_TOP (strut->rect) < max_y)
-      //   max_y = BOX_TOP (strut->rect);
     } /* end loop over struts */
-  g_printerr ("x %d, y %d, width %d, height %d\n", min_x, min_y, max_x - min_x, max_y - min_y);
+
+  gboolean ulc = FALSE, llc = FALSE, urc = FALSE, lrc = FALSE;
+
+  for (strut_iter = snapped_windows_as_struts; strut_iter; strut_iter = strut_iter->next)
+    {
+
+      MetaStrut *strut = (MetaStrut*) strut_iter->data;
+
+      if (strut->side == (META_SIDE_LEFT | META_SIDE_TOP) ||
+          strut->side == (META_SIDE_LEFT | META_SIDE_BOTTOM) ||
+          strut->side == (META_SIDE_RIGHT | META_SIDE_TOP) ||
+          strut->side == (META_SIDE_RIGHT | META_SIDE_BOTTOM)) {
+        ulc = ulc || strut->side == (META_SIDE_LEFT | META_SIDE_TOP);
+        llc = llc || strut->side == (META_SIDE_LEFT | META_SIDE_BOTTOM);
+        urc = urc || strut->side == (META_SIDE_RIGHT | META_SIDE_TOP);
+        lrc = lrc || strut->side == (META_SIDE_RIGHT | META_SIDE_BOTTOM);
+        continue;
+      }
+      if (strut->side & META_SIDE_LEFT)
+        if (BOX_RIGHT (strut->rect) > min_x)
+            min_x = BOX_RIGHT (strut->rect);
+      if (strut->side & META_SIDE_RIGHT)
+        if (BOX_LEFT (strut->rect) < max_x)
+            max_x = BOX_LEFT (strut->rect);
+      if (strut->side & META_SIDE_TOP)
+        if (BOX_BOTTOM (strut->rect) > min_y)
+            min_y = BOX_BOTTOM (strut->rect);
+      if (strut->side & META_SIDE_BOTTOM)
+        if (BOX_TOP (strut->rect) < max_y)
+            max_y = BOX_TOP (strut->rect);
+    } /* end loop over struts */
+
+  for (strut_iter = snapped_windows_as_struts; strut_iter; strut_iter = strut_iter->next)
+    {
+      MetaStrut *strut = (MetaStrut*) strut_iter->data;
+
+      if (strut->side == (META_SIDE_LEFT | META_SIDE_TOP)) {
+        if (llc) {
+            min_x = BOX_RIGHT (strut->rect);
+        }
+        if (urc) {
+            min_y = BOX_BOTTOM (strut->rect);
+        }
+        if (!llc && !urc) {
+            if (x_c > BOX_RIGHT (strut->rect) &&
+                y_c < BOX_BOTTOM (strut->rect))
+                min_x = BOX_RIGHT (strut->rect);
+            else
+                min_y = BOX_BOTTOM (strut->rect);
+        }
+      } else if (strut->side == (META_SIDE_LEFT | META_SIDE_BOTTOM)) {
+        if (ulc) {
+            min_x = BOX_RIGHT (strut->rect);
+        }
+        if (lrc) {
+            max_y = BOX_TOP (strut->rect);
+        }
+        if (!ulc && !lrc) {
+            if (x_c > BOX_RIGHT (strut->rect) &&
+                y_c > BOX_TOP (strut->rect)) {
+                min_x = BOX_RIGHT (strut->rect);
+            } else {
+                max_y = BOX_TOP (strut->rect);
+            }
+        }
+      } else if (strut->side == (META_SIDE_RIGHT | META_SIDE_TOP)) {
+        if (lrc) {
+            max_x = BOX_LEFT (strut->rect);
+        }
+        if (ulc) {
+            min_y = BOX_BOTTOM (strut->rect);
+        }
+        if (!lrc && !ulc) {
+            if (x_c < BOX_LEFT (strut->rect) &&
+                y_c < BOX_BOTTOM (strut->rect))
+                max_x = BOX_LEFT (strut->rect);
+            else
+                min_y = BOX_BOTTOM (strut->rect);
+        }
+      } else if (strut->side == (META_SIDE_RIGHT | META_SIDE_BOTTOM)) {
+        if (urc) {
+            max_x = BOX_LEFT (strut->rect);
+        }
+        if (llc) {
+            max_y = BOX_TOP (strut->rect);
+        }
+        if (!urc && !llc) {
+            if (x_c < BOX_LEFT (strut->rect) &&
+                y_c > BOX_TOP (strut->rect))
+                max_x = BOX_LEFT (strut->rect);
+            else
+                max_y = BOX_TOP (strut->rect);
+        }
+      } else {
+        continue;
+      }
+    } /* end loop over struts */
+
   rect->x = min_x;
   rect->y = min_y;
   rect->width = max_x - min_x;

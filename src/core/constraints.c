@@ -795,6 +795,13 @@ constrain_modal_dialog (MetaWindow         *window,
                                                      check_only);
 }
 
+// static void
+// snapped_destroy_func (gpointer data)
+// {
+//    // MetaStrut *strut = (MetaStrut*) data;
+//   //  meta_rectangle_free (&strut->rect);
+// }
+
 static gboolean
 constrain_maximization (MetaWindow         *window,
                         ConstraintInfo     *info,
@@ -843,18 +850,22 @@ constrain_maximization (MetaWindow         *window,
       active_workspace_struts = window->screen->active_workspace->all_struts;
 
       if (g_list_length (window->screen->active_workspace->snapped_windows) > 0) {
+        g_printerr ("constraining____________________\n");
         GList *tmp = window->screen->active_workspace->snapped_windows;
+        GSList *snapped_windows_as_struts = NULL;
         while (tmp) {
-            if (tmp->data == window)
+            if (tmp->data == window) {
+                tmp = tmp->next;
                 continue;
-            MetaStrut strut;
+            }
+            MetaStrut *strut = g_slice_new0 (MetaStrut);
             MetaSide side;
             MetaRectangle rect;
-            meta_window_get_input_rect (META_WINDOW (tmp->data), &rect);
+            meta_window_get_outer_rect (META_WINDOW (tmp->data), &rect);
             side = meta_window_get_tile_side (META_WINDOW (tmp->data));
-            strut.rect = rect;
-            strut.side = side;
-            active_workspace_struts = g_slist_prepend (active_workspace_struts, &strut);
+            strut->rect = rect;
+            strut->side = side;
+            snapped_windows_as_struts = g_slist_prepend (snapped_windows_as_struts, strut);
             tmp = tmp->next;
         }
 
@@ -863,7 +874,10 @@ constrain_maximization (MetaWindow         *window,
         meta_rectangle_expand_to_snapped_borders (&target_size,
                                                   &info->entire_monitor,
                                                    direction,
-                                                   active_workspace_struts);
+                                                   active_workspace_struts,
+                                                   snapped_windows_as_struts,
+                                                   &window->user_rect);
+        g_slist_free (snapped_windows_as_struts);
       } else {
           target_size = info->current;
           extend_by_frame (&target_size, info->borders);
