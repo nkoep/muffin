@@ -1990,7 +1990,7 @@ meta_screen_tile_preview_update_timeout (gpointer data)
       MetaRectangle tile_rect;
 
       meta_window_get_current_tile_area (window, &tile_rect);
-      meta_tile_preview_show (screen->tile_preview, &tile_rect);
+      meta_tile_preview_show (screen->tile_preview, &tile_rect, window->snap_queued);
     }
   else
     meta_tile_preview_hide (screen->tile_preview);

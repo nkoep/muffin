@@ -107,7 +107,8 @@ static void meta_window_move_resize_now (MetaWindow  *window);
 static void meta_window_unqueue (MetaWindow *window, guint queuebits);
 
 static void     update_move           (MetaWindow   *window,
-                                       gboolean      snap,
+                                       gboolean      legacy_snap,
+                                       gboolean      snap_mode,
                                        int           x,
                                        int           y);
 static gboolean update_move_timeout   (gpointer data);
@@ -3796,6 +3797,8 @@ meta_window_tile (MetaWindow *window)
         window->snap_queued = FALSE;
         g_printerr ("________________________tile only\n");
     }
+
+  meta_screen_tile_preview_hide (window->screen);
 }
 
 static gboolean
@@ -8870,6 +8873,7 @@ update_move_timeout (gpointer data)
 
   update_move (window,
                window->display->grab_last_user_action_was_snap,
+               window->snap_queued,
                window->display->grab_latest_motion_x,
                window->display->grab_latest_motion_y);
 
@@ -8952,7 +8956,8 @@ get_current_zone (MetaWindow   *window,
 
 static void
 update_move (MetaWindow  *window,
-             gboolean     snap,
+             gboolean     legacy_snap,
+             gboolean     snap_mode,
              int          x,
              int          y)
 {
@@ -8979,6 +8984,11 @@ update_move (MetaWindow  *window,
                 display->grab_anchor_window_pos.y,
                 dx, dy);
 
+  if (snap_mode)
+    window->snap_queued = TRUE;
+  else
+    window->snap_queued = FALSE;
+
   /* Don't bother doing anything if no move has been specified.  (This
    * happens often, even in keyboard moving, due to the warping of the
    * pointer.
@@ -8992,7 +9002,7 @@ update_move (MetaWindow  *window,
    */
   shake_threshold = meta_prefs_get_edge_tile_threshold ();
 
-  if (snap)
+  if (legacy_snap)
     {
       /* We don't want to tile while snapping. Also, clear any previous tile
          request. */
@@ -9030,22 +9040,6 @@ update_move (MetaWindow  *window,
        * and set tile_mode accordingly.
        */
       guint zone = get_current_zone (window, monitor->rect, work_area, x, y, shake_threshold);
-      if (zone != ZONE_NONE) {
-        if (window->zone_queued == ZONE_NONE) {
-            window->zone_queued = zone;
-            window->snap_delay_timestamp = meta_display_get_current_time (window->display);
-        } else if (window->zone_queued == zone) {
-            if (window->snap_delay_timestamp + SNAP_DELAY < meta_display_get_current_time (window->display)) {
-                window->snap_queued = TRUE;
-            }
-        } else {
-            window->snap_queued = FALSE;
-            window->zone_queued = zone;
-        }
-      } else {
-        window->snap_queued = FALSE;
-        window->zone_queued = ZONE_NONE;
-      }
 
       switch (zone) {
         case ZONE_0:
@@ -9233,7 +9227,7 @@ update_move (MetaWindow  *window,
                                         &new_x,
                                         &new_y,
                                         update_move_timeout,
-                                        snap,
+                                        legacy_snap,
                                         FALSE);
 
   meta_window_move (window, TRUE, new_x, new_y);
@@ -9760,7 +9754,9 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
               if (window->tile_mode != META_TILE_NONE)
                 meta_window_tile (window);
               else if (event->xbutton.root == window->screen->xroot)
-                update_move (window, event->xbutton.state & ShiftMask,
+                update_move (window,
+                             event->xbutton.state & ShiftMask,
+                             event->xbutton.state & ControlMask,
                              event->xbutton.x_root, event->xbutton.y_root);
             }
           else if (meta_grab_op_is_resizing (window->display->grab_op))
@@ -9800,6 +9796,7 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
                                                 event))
                 update_move (window,
                              event->xmotion.state & ShiftMask,
+                             event->xmotion.state & ControlMask,
                              event->xmotion.x_root,
                              event->xmotion.y_root);
             }
