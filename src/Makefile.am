@@ -267,11 +267,6 @@ wmproperties_in_files=muffin-wm.desktop.in
 wmproperties_files=$(wmproperties_in_files:.desktop.in=.desktop)
 wmproperties_DATA = $(wmproperties_files)
 
-xmldir       = @GNOME_KEYBINDINGS_KEYSDIR@
-xml_in_files = \
-        50-muffin-windows.xml.in
-xml_DATA     = $(xml_in_files:.xml.in=.xml)
-
 gsettings_SCHEMAS = org.cinnamon.muffin.gschema.xml
 @INTLTOOL_XML_NOMERGE_RULE@
 @GSETTINGS_RULES@

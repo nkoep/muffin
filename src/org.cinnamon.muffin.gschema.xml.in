@@ -114,9 +114,6 @@
     </key>
 
 
-
-
-
     <child name="keybindings" schema="org.cinnamon.muffin.keybindings"/>
 
   </schema>
@@ -126,12 +123,36 @@
       <default><![CDATA[['<Control><Shift><Alt>r']]]></default>
     </key>
 
-    <key name="toggle-tiled-left" type="as">
+    <key name="push-tile-left" type="as">
       <default><![CDATA[['<Super>Left']]]></default>
     </key>
 
-    <key name="toggle-tiled-right" type="as">
+    <key name="push-tile-right" type="as">
       <default><![CDATA[['<Super>Right']]]></default>
+    </key>
+
+    <key name="push-tile-up" type="as">
+      <default><![CDATA[['<Super>Left']]]></default>
+    </key>
+
+    <key name="push-tile-down" type="as">
+      <default><![CDATA[['<Super>Right']]]></default>
+    </key>
+
+    <key name="push-snap-left" type="as">
+      <default><![CDATA[['<Control><Super>Left']]]></default>
+    </key>
+
+    <key name="push-snap-right" type="as">
+      <default><![CDATA[['<Control><Super>Right']]]></default>
+    </key>
+
+    <key name="push-snap-up" type="as">
+      <default><![CDATA[['<Control><Super>Left']]]></default>
+    </key>
+
+    <key name="push-snap-down" type="as">
+      <default><![CDATA[['<Control><Super>Right']]]></default>
     </key>
 
     <key name="tab-popup-select" type="as">

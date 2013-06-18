@@ -3367,8 +3367,144 @@ handle_toggle_above       (MetaDisplay    *display,
     meta_window_make_above (window);
 }
 
+static MetaTileMode
+get_new_tile_mode (MetaTileMode direction,
+                   MetaTileMode current)
+{
+    MetaTileMode ret = META_TILE_NONE;
+    switch (current) {
+        case META_TILE_NONE:
+            ret = direction;
+            break;
+        case META_TILE_LEFT:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_HALF_LEFT;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_NONE;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_ULC;
+            else
+                ret = META_TILE_LLC;
+            break;
+        case META_TILE_HALF_LEFT:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_HALF_LEFT;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_LEFT;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_ULC;
+            else
+                ret = META_TILE_LLC;
+            break;
+        case META_TILE_RIGHT:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_NONE;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_HALF_RIGHT;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_URC;
+            else
+                ret = META_TILE_LRC;
+            break;
+        case META_TILE_HALF_RIGHT:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_RIGHT;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_HALF_RIGHT;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_URC;
+            else
+                ret = META_TILE_LRC;
+            break;
+        case META_TILE_TOP:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_ULC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_URC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_TOP;
+            else
+                ret = META_TILE_NONE;
+            break;
+        case META_TILE_HALF_TOP:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_ULC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_URC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_TOP;
+            else
+                ret = META_TILE_TOP;
+            break;
+        case META_TILE_BOTTOM:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_LLC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_LRC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_NONE;
+            else
+                ret = META_TILE_HALF_BOTTOM;
+            break;
+        case META_TILE_HALF_BOTTOM:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_LLC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_LRC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_BOTTOM;
+            else
+                ret = META_TILE_HALF_BOTTOM;
+            break;
+        case META_TILE_ULC:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_ULC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_HALF_TOP;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_ULC;
+            else
+                ret = META_TILE_HALF_LEFT;
+            break;
+        case META_TILE_LLC:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_LLC;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_HALF_BOTTOM;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_LEFT;
+            else
+                ret = META_TILE_LLC;
+            break;
+        case META_TILE_URC:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_HALF_TOP;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_URC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_URC;
+            else
+                ret = META_TILE_HALF_RIGHT;
+            break;
+        case META_TILE_LRC:
+            if (direction == META_TILE_LEFT)
+                ret = META_TILE_HALF_BOTTOM;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_LRC;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_RIGHT;
+            else
+                ret = META_TILE_LRC;
+            break;
+        default:
+            ret = current;
+            break;
+    }
+    return ret;
+}
+
 static void
-handle_toggle_tiled (MetaDisplay    *display,
+handle_tile_action (MetaDisplay    *display,
                      MetaScreen     *screen,
                      MetaWindow     *window,
                      XEvent         *event,
@@ -3376,24 +3512,51 @@ handle_toggle_tiled (MetaDisplay    *display,
                      gpointer        dummy)
 {
   MetaTileMode mode = binding->handler->data;
+  MetaKeyBindingAction action = meta_prefs_get_keybinding_action (binding->name);
+  gboolean snap = action == META_KEYBINDING_ACTION_PUSH_SNAP_LEFT ||
+                  action == META_KEYBINDING_ACTION_PUSH_SNAP_RIGHT ||
+                  action == META_KEYBINDING_ACTION_PUSH_SNAP_UP ||
+                  action == META_KEYBINDING_ACTION_PUSH_SNAP_DOWN;
 
-  if ((META_WINDOW_TILED_LEFT (window) && mode == META_TILE_LEFT) ||
-      (META_WINDOW_TILED_RIGHT (window) && mode == META_TILE_RIGHT))
-    {
-      window->tile_monitor_number = window->saved_maximize ? window->monitor->number
-                                                           : -1;
-      window->tile_mode = window->saved_maximize ? META_TILE_MAXIMIZED
-                                                 : META_TILE_NONE;
+  MetaTileMode new_mode = get_new_tile_mode (mode, window->tile_mode);
 
-      if (window->saved_maximize)
-        meta_window_maximize (window, META_MAXIMIZE_VERTICAL |
-                                      META_MAXIMIZE_HORIZONTAL);
-      else
-        meta_window_unmaximize (window, META_MAXIMIZE_VERTICAL |
-                                        META_MAXIMIZE_HORIZONTAL);
-    }
-  else if (meta_window_can_tile_side_by_side (window))
-    {
+  if (new_mode == window->tile_mode)
+    return;
+
+  gboolean can_do = FALSE;
+
+  switch (new_mode) {
+    case META_TILE_LEFT:
+    case META_TILE_RIGHT:
+        can_do = meta_window_can_tile_side_by_side (window);
+        break;
+    case META_TILE_HALF_LEFT:
+    case META_TILE_HALF_RIGHT:
+        can_do = meta_window_can_tile_quarter_vertical_pane (window);
+        break;
+    case META_TILE_TOP:
+    case META_TILE_BOTTOM:
+        can_do = meta_window_can_tile_top_bottom (window);
+        break;
+    case META_TILE_HALF_TOP:
+    case META_TILE_HALF_BOTTOM:
+        can_do = meta_window_can_tile_half_top_bottom (window);
+        break;
+    case META_TILE_ULC:
+    case META_TILE_LLC:
+    case META_TILE_URC:
+    case META_TILE_LRC:
+        can_do = meta_window_can_tile_corner (window);
+        break;
+    default:
+        break;
+  }
+
+  if (!can_do)
+    return;
+
+  if (new_mode != META_TILE_NONE) {
+      window->snap_queued = snap;
       window->tile_monitor_number = window->monitor->number;
       window->tile_mode = mode;
       /* Maximization constraints beat tiling constraints, so if the window
@@ -3403,8 +3566,20 @@ handle_toggle_tiled (MetaDisplay    *display,
        * save an additional roundtrip.
        */
       window->maximized_horizontally = FALSE;
+      window->maximized_vertically = FALSE;
       meta_window_tile (window);
-    }
+  } else {
+      window->tile_monitor_number = window->saved_maximize ? window->monitor->number
+                                                           : -1;
+      window->tile_mode = window->saved_maximize ? META_TILE_MAXIMIZED
+                                                 : META_TILE_NONE;
+      if (window->saved_maximize)
+        meta_window_maximize (window, META_MAXIMIZE_VERTICAL |
+                                      META_MAXIMIZE_HORIZONTAL);
+      else
+        meta_window_unmaximize (window, META_MAXIMIZE_VERTICAL |
+                                        META_MAXIMIZE_HORIZONTAL);
+  }
 }
 
 static void
@@ -4065,18 +4240,62 @@ init_builtin_key_bindings (MetaDisplay *display)
                           handle_toggle_maximized, 0);
 
   add_builtin_keybinding (display,
-                          "toggle-tiled-left",
+                          "push-tile-left",
                           SCHEMA_MUFFIN_KEYBINDINGS,
                           META_KEY_BINDING_PER_WINDOW,
-                          META_KEYBINDING_ACTION_TOGGLE_TILED_LEFT,
-                          handle_toggle_tiled, META_TILE_LEFT);
+                          META_KEYBINDING_ACTION_PUSH_TILE_LEFT,
+                          handle_tile_action, META_TILE_LEFT);
 
   add_builtin_keybinding (display,
-                          "toggle-tiled-right",
+                          "push-tile-right",
                           SCHEMA_MUFFIN_KEYBINDINGS,
                           META_KEY_BINDING_PER_WINDOW,
-                          META_KEYBINDING_ACTION_TOGGLE_TILED_RIGHT,
-                          handle_toggle_tiled, META_TILE_RIGHT);
+                          META_KEYBINDING_ACTION_PUSH_TILE_RIGHT,
+                          handle_tile_action, META_TILE_RIGHT);
+
+  add_builtin_keybinding (display,
+                          "push-tile-up",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_TILE_UP,
+                          handle_tile_action, META_TILE_TOP);
+
+  add_builtin_keybinding (display,
+                          "push-tile-down",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_TILE_DOWN,
+                          handle_tile_action, META_TILE_BOTTOM);
+
+  add_builtin_keybinding (display,
+                          "push-snap-left",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_SNAP_LEFT,
+                          handle_tile_action, META_TILE_LEFT);
+
+  add_builtin_keybinding (display,
+                          "push-snap-right",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_SNAP_RIGHT,
+                          handle_tile_action, META_TILE_RIGHT);
+
+  add_builtin_keybinding (display,
+                          "push-snap-up",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_SNAP_UP,
+                          handle_tile_action, META_TILE_TOP);
+
+  add_builtin_keybinding (display,
+                          "push-snap-down",
+                          SCHEMA_MUFFIN_KEYBINDINGS,
+                          META_KEY_BINDING_PER_WINDOW,
+                          META_KEYBINDING_ACTION_PUSH_SNAP_DOWN,
+                          handle_tile_action, META_TILE_BOTTOM);
+
+
 
   add_builtin_keybinding (display,
                           "toggle-above",
