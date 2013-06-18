@@ -132,11 +132,11 @@
     </key>
 
     <key name="push-tile-up" type="as">
-      <default><![CDATA[['<Super>Left']]]></default>
+      <default><![CDATA[['<Super>Up']]]></default>
     </key>
 
     <key name="push-tile-down" type="as">
-      <default><![CDATA[['<Super>Right']]]></default>
+      <default><![CDATA[['<Super>Down']]]></default>
     </key>
 
     <key name="push-snap-left" type="as">
@@ -148,11 +148,11 @@
     </key>
 
     <key name="push-snap-up" type="as">
-      <default><![CDATA[['<Control><Super>Left']]]></default>
+      <default><![CDATA[['<Control><Super>Up']]]></default>
     </key>
 
     <key name="push-snap-down" type="as">
-      <default><![CDATA[['<Control><Super>Right']]]></default>
+      <default><![CDATA[['<Control><Super>Down']]]></default>
     </key>
 
     <key name="tab-popup-select" type="as">

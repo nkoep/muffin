@@ -1126,6 +1126,7 @@ meta_window_new_with_attrs (MetaDisplay       *display,
   window->on_all_workspaces = FALSE;
   window->on_all_workspaces_requested = FALSE;
   window->tile_mode = META_TILE_NONE;
+  window->last_tile_mode = META_TILE_NONE;
   window->tile_monitor_number = -1;
   window->shaded = FALSE;
   window->initially_iconic = FALSE;
@@ -3564,10 +3565,12 @@ meta_window_maximize_internal (MetaWindow        *window,
                 maximize_horizontally ? " horizontally" :
                   maximize_vertically ? " vertically" : "BUGGGGG");
 
-  if (saved_rect != NULL)
-    window->saved_rect = *saved_rect;
-  else
-    meta_window_save_rect (window);
+  if (window->last_tile_mode == META_TILE_NONE) {
+      if (saved_rect != NULL)
+        window->saved_rect = *saved_rect;
+      else
+        meta_window_save_rect (window);
+  }
 
   if (maximize_horizontally && maximize_vertically)
     window->saved_maximize = TRUE;
@@ -3726,13 +3729,13 @@ meta_window_requested_dont_bypass_compositor (MetaWindow *window)
 }
 
 LOCAL_SYMBOL void
-meta_window_tile (MetaWindow *window)
+meta_window_tile (MetaWindow *window, gboolean force)
 {
   MetaMaximizeFlags directions;
 /* Don't do anything if no tiling is requested or we're already tiled */
-  if (window->tile_mode == META_TILE_NONE || window->maximized_vertically ||
+  if (window->tile_mode == META_TILE_NONE || (window->maximized_vertically ||
                                              window->maximized_horizontally ||
-                                             window->corner_tiled)
+                                             window->corner_tiled) && !force)
     return;
 
   if (window->tile_mode == META_TILE_MAXIMIZED)
@@ -4124,7 +4127,7 @@ meta_window_unmaximize (MetaWindow        *window,
       window->tile_mode == META_TILE_RIGHT)
     {
       window->maximized_horizontally = FALSE;
-      meta_window_tile (window);
+      meta_window_tile (window, FALSE);
       return;
     }
 
@@ -9752,7 +9755,7 @@ meta_window_handle_mouse_grab_op_event (MetaWindow *window,
           if (meta_grab_op_is_moving (window->display->grab_op))
             {
               if (window->tile_mode != META_TILE_NONE)
-                meta_window_tile (window);
+                meta_window_tile (window, FALSE);
               else if (event->xbutton.root == window->screen->xroot)
                 update_move (window,
                              event->xbutton.state & ShiftMask,

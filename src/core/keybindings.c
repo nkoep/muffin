@@ -3458,43 +3458,43 @@ get_new_tile_mode (MetaTileMode direction,
             break;
         case META_TILE_ULC:
             if (direction == META_TILE_LEFT)
-                ret = META_TILE_ULC;
-            else if (direction == META_TILE_RIGHT)
-                ret = META_TILE_HALF_TOP;
-            else if (direction == META_TILE_TOP)
-                ret = META_TILE_ULC;
-            else
                 ret = META_TILE_HALF_LEFT;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_TOP;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_TOP;
+            else
+                ret = META_TILE_LEFT;
             break;
         case META_TILE_LLC:
             if (direction == META_TILE_LEFT)
-                ret = META_TILE_LLC;
-            else if (direction == META_TILE_RIGHT)
-                ret = META_TILE_HALF_BOTTOM;
-            else if (direction == META_TILE_TOP)
                 ret = META_TILE_HALF_LEFT;
+            else if (direction == META_TILE_RIGHT)
+                ret = META_TILE_BOTTOM;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_LEFT;
             else
-                ret = META_TILE_LLC;
+                ret = META_TILE_HALF_BOTTOM;
             break;
         case META_TILE_URC:
             if (direction == META_TILE_LEFT)
-                ret = META_TILE_HALF_TOP;
+                ret = META_TILE_TOP;
             else if (direction == META_TILE_RIGHT)
-                ret = META_TILE_URC;
-            else if (direction == META_TILE_TOP)
-                ret = META_TILE_URC;
-            else
                 ret = META_TILE_HALF_RIGHT;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_HALF_TOP;
+            else
+                ret = META_TILE_RIGHT;
             break;
         case META_TILE_LRC:
             if (direction == META_TILE_LEFT)
-                ret = META_TILE_HALF_BOTTOM;
+                ret = META_TILE_BOTTOM;
             else if (direction == META_TILE_RIGHT)
-                ret = META_TILE_LRC;
-            else if (direction == META_TILE_TOP)
                 ret = META_TILE_HALF_RIGHT;
+            else if (direction == META_TILE_TOP)
+                ret = META_TILE_RIGHT;
             else
-                ret = META_TILE_LRC;
+                ret = META_TILE_HALF_BOTTOM;
             break;
         default:
             ret = current;
@@ -3519,7 +3519,6 @@ handle_tile_action (MetaDisplay    *display,
                   action == META_KEYBINDING_ACTION_PUSH_SNAP_DOWN;
 
   MetaTileMode new_mode = get_new_tile_mode (mode, window->tile_mode);
-
   if (new_mode == window->tile_mode)
     return;
 
@@ -3549,6 +3548,7 @@ handle_tile_action (MetaDisplay    *display,
         can_do = meta_window_can_tile_corner (window);
         break;
     default:
+        can_do = TRUE;
         break;
   }
 
@@ -3556,9 +3556,10 @@ handle_tile_action (MetaDisplay    *display,
     return;
 
   if (new_mode != META_TILE_NONE) {
+      window->last_tile_mode = window->tile_mode;
       window->snap_queued = snap;
       window->tile_monitor_number = window->monitor->number;
-      window->tile_mode = mode;
+      window->tile_mode = new_mode;
       /* Maximization constraints beat tiling constraints, so if the window
        * is maximized, tiling won't have any effect unless we unmaximize it
        * horizontally first; rather than calling meta_window_unmaximize(),
@@ -3567,8 +3568,9 @@ handle_tile_action (MetaDisplay    *display,
        */
       window->maximized_horizontally = FALSE;
       window->maximized_vertically = FALSE;
-      meta_window_tile (window);
+      meta_window_tile (window, TRUE);
   } else {
+    g_printerr("blah\n");
       window->tile_monitor_number = window->saved_maximize ? window->monitor->number
                                                            : -1;
       window->tile_mode = window->saved_maximize ? META_TILE_MAXIMIZED

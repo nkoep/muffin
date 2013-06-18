@@ -144,6 +144,7 @@ struct _MetaWindow
    * this is the current mode. If not, it is the mode which will be
    * requested after the window grab is released */
   guint tile_mode : 4;
+  guint last_tile_mode : 4;
   /* The last "full" maximized/unmaximized state. We need to keep track of
    * that to toggle between normal/tiled or maximized/tiled states. */
   guint saved_maximize : 1;
@@ -498,7 +499,8 @@ void        meta_window_unmanage           (MetaWindow  *window,
 void        meta_window_calc_showing       (MetaWindow  *window);
 void        meta_window_queue              (MetaWindow  *window,
                                             guint queuebits);
-void        meta_window_tile               (MetaWindow        *window);
+void        meta_window_tile               (MetaWindow        *window,
+                                            gboolean           force);
 void        meta_window_maximize_internal  (MetaWindow        *window,
                                             MetaMaximizeFlags  directions,
                                             MetaRectangle     *saved_rect);
