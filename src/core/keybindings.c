@@ -1854,7 +1854,7 @@ process_mouse_move_resize_grab (MetaDisplay *display,
                               META_MAXIMIZE_HORIZONTAL |
                               META_MAXIMIZE_VERTICAL);
       else if (window->tile_mode != META_TILE_NONE)
-        meta_window_tile (window);
+        meta_window_tile (window, FALSE);
       else
         meta_window_move_resize (display->grab_window,
                                  TRUE,
@@ -3570,7 +3570,6 @@ handle_tile_action (MetaDisplay    *display,
       window->maximized_vertically = FALSE;
       meta_window_tile (window, TRUE);
   } else {
-    g_printerr("blah\n");
       window->tile_monitor_number = window->saved_maximize ? window->monitor->number
                                                            : -1;
       window->tile_mode = window->saved_maximize ? META_TILE_MAXIMIZED

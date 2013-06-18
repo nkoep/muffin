@@ -1068,9 +1068,8 @@ meta_workspace_add_snapped_window (MetaWorkspace *workspace,
     }
   else
     {
-                g_printerr ("add snapped\n");
-      g_assert (g_list_find (workspace->snapped_windows, window) == NULL);
-      workspace->snapped_windows = g_list_prepend (workspace->snapped_windows, window);
+      if (g_list_find (workspace->snapped_windows, window) == NULL)
+        workspace->snapped_windows = g_list_prepend (workspace->snapped_windows, window);
     }
 }
 

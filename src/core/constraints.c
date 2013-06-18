@@ -850,7 +850,6 @@ constrain_maximization (MetaWindow         *window,
       active_workspace_struts = window->screen->active_workspace->all_struts;
 
       if (g_list_length (window->screen->active_workspace->snapped_windows) > 0) {
-        g_printerr ("constraining____________________\n");
         GList *tmp = window->screen->active_workspace->snapped_windows;
         GSList *snapped_windows_as_struts = NULL;
         while (tmp) {

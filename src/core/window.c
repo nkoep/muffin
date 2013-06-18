@@ -3733,9 +3733,9 @@ meta_window_tile (MetaWindow *window, gboolean force)
 {
   MetaMaximizeFlags directions;
 /* Don't do anything if no tiling is requested or we're already tiled */
-  if (window->tile_mode == META_TILE_NONE || (window->maximized_vertically ||
+  if (window->tile_mode == META_TILE_NONE || ((window->maximized_vertically ||
                                              window->maximized_horizontally ||
-                                             window->corner_tiled) && !force)
+                                             window->corner_tiled) && !force))
     return;
 
   if (window->tile_mode == META_TILE_MAXIMIZED)
